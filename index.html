@@ -1,41 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Sync Demo</title>
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <title>WebSocket Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .connected { background: #dfffdf; color: #2a592a; }
+        .disconnected { background: #ffe5e5; color: #8b0000; }
+    </style>
 </head>
 <body>
-    <h1>WebSocket Синхронизация</h1>
-    <div id="status">Статус: Отключено</div>
-    <button id="sendData">Отправить данные</button>
-    <div id="receivedData"></div>
+    <h1>WebSocket Клиент</h1>
+    
+    <button onclick="connect()">Подключиться</button>
+    <button onclick="disconnect()" disabled id="disconnectBtn">Отключиться</button>
+    
+    <div id="status" class="disconnected">Статус: Не подключено</div>
 
     <script>
-        // Подключаемся к WebSocket серверу на Glitch
-        const socket = io('strengthened-languid-gargoyleosaurus.glitch.me');
-        
-        socket.on('connect', () => {
-            document.getElementById('status').textContent = 'Статус: Подключено';
-        });
-        
-        socket.on('disconnect', () => {
-            document.getElementById('status').textContent = 'Статус: Отключено';
-        });
-        
-        // Получаем обновленные данные от сервера
-        socket.on('data-updated', (data) => {
-            const receivedEl = document.getElementById('receivedData');
-            receivedEl.innerHTML += `<p>${data.timestamp}: ${JSON.stringify(data.data)}</p>`;
-        });
-        
-        // Отправляем данные на сервер
-        document.getElementById('sendData').addEventListener('click', () => {
-            const dataToSend = {
-                message: 'Hello from GitHub Pages!',
-                timestamp: new Date()
+        let socket = null;
+        const serverUrl = 'wss://strengthened-languid-gargoyleosaurus.glitch.me';
+
+        function updateStatus(text, isConnected) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = `Статус: ${text}`;
+            statusEl.className = isConnected ? 'connected' : 'disconnected';
+            document.getElementById('disconnectBtn').disabled = !isConnected;
+        }
+
+        function connect() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                updateStatus('Уже подключено', true);
+                return;
+            }
+
+            socket = new WebSocket(serverUrl);
+
+            socket.onopen = () => {
+                updateStatus('Подключено', true);
             };
-            socket.emit('sync-data', dataToSend);
-        });
+
+            socket.onclose = (event) => {
+                updateStatus(`Отключено (код: ${event.code})`, false);
+            };
+
+            socket.onerror = (error) => {
+                updateStatus(`Ошибка: ${error.message}`, false);
+            };
+        }
+
+        function disconnect() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            updateStatus('Отключено', false);
+        }
     </script>
 </body>
 </html>
